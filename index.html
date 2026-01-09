@@ -1,0 +1,155 @@
+// ================ نسخ الروابط - النسخة المصححة ================
+async function copyUrlsToClipboard() {
+    if (!videos || videos.length === 0) {
+        showMessage('error', 'لا توجد روابط لنسخها');
+        return;
+    }
+    
+    // جمع الروابط فقط - التصحيح هنا
+    let urlsText = '';
+    
+    for (const video of videos) {
+        if (video.videoUrl && video.videoUrl.trim() !== '') {
+            urlsText += video.videoUrl + '\n';
+        }
+    }
+    
+    // التحقق من وجود روابط
+    if (urlsText.trim() === '') {
+        showMessage('error', 'لا توجد روابط صالحة للنسخ');
+        return;
+    }
+    
+    try {
+        // طريقة أكثر موثوقية للنسخ
+        const textArea = document.createElement('textarea');
+        textArea.value = urlsText.trim();
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+            // عرض تأكيد بصري
+            showCopyConfirmation();
+            showMessage('success', `تم نسخ ${videos.length} رابط بنجاح!`);
+        } else {
+            throw new Error('فشل النسخ باستخدام execCommand');
+        }
+        
+    } catch (error) {
+        console.error('خطأ في النسخ:', error);
+        
+        // المحاولة باستخدام Clipboard API إذا فشلت الطريقة الأولى
+        try {
+            await navigator.clipboard.writeText(urlsText.trim());
+            showCopyConfirmation();
+            showMessage('success', `تم نسخ ${videos.length} رابط بنجاح!`);
+        } catch (clipboardError) {
+            console.error('خطأ في Clipboard API:', clipboardError);
+            
+            // العرض للمستخدم لنسخ يدوي
+            showManualCopyOption(urlsText.trim());
+        }
+    }
+}
+
+// ================ عرض تأكيد النسخ ================
+function showCopyConfirmation() {
+    const copyBtn = elements.copyBtn;
+    const originalText = copyBtn.innerHTML;
+    
+    // تغيير مظهر الزر مؤقتاً
+    copyBtn.innerHTML = '<i class="fas fa-check"></i> تم النسخ!';
+    copyBtn.style.background = 'linear-gradient(135deg, #28a745, #218838)';
+    
+    // العودة إلى الحالة الأصلية بعد 2 ثانية
+    setTimeout(() => {
+        copyBtn.innerHTML = originalText;
+        copyBtn.style.background = 'linear-gradient(135deg, var(--info), #138496)';
+    }, 2000);
+}
+
+// ================ عرض خيار النسخ اليدوي ================
+function showManualCopyOption(text) {
+    // إنشاء نافذة للنسخ اليدوي
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--card-dark);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        z-index: 1000;
+        max-width: 90%;
+        width: 500px;
+        border: 2px solid var(--primary-color);
+    `;
+    
+    modal.innerHTML = `
+        <h3 style="color: var(--primary-color); margin-bottom: 15px;">
+            <i class="fas fa-exclamation-triangle"></i> النسخ اليدوي
+        </h3>
+        <p style="margin-bottom: 15px; color: var(--text-dark);">
+            فشل النسخ التلقائي. الرجاء نسخ الروابط يدوياً:
+        </p>
+        <textarea 
+            id="manualCopyText" 
+            style="
+                width: 100%;
+                height: 200px;
+                padding: 10px;
+                background: var(--input-dark);
+                color: var(--text-dark);
+                border: 1px solid var(--border-dark);
+                border-radius: 5px;
+                font-family: monospace;
+                resize: vertical;
+                margin-bottom: 15px;
+            "
+            readonly
+        >${text}</textarea>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="closeModalBtn" style="
+                padding: 8px 20px;
+                background: var(--primary-color);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            ">
+                إغلاق
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // تحديد العنصر والسماح بتحديده
+    const textarea = document.getElementById('manualCopyText');
+    textarea.select();
+    textarea.focus();
+    
+    // إغلاق النافذة
+    document.getElementById('closeModalBtn').onclick = function() {
+        document.body.removeChild(modal);
+    };
+}
+
+// ================ تحديث معالج الأحداث للتأكد من الاتصال الصحيح ================
+function initializeApp() {
+    // ... (الكود السابق) ...
+    
+    // إضافة معالجات الأحداث - تأكد من هذه الأسطر
+    elements.copyBtn.addEventListener('click', copyUrlsToClipboard);
+    
+    // ... (الكود السابق) ...
+}
