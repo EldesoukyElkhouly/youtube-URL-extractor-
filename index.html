@@ -1,155 +1,903 @@
-// ================ نسخ الروابط - النسخة المصححة ================
-async function copyUrlsToClipboard() {
-    if (!videos || videos.length === 0) {
-        showMessage('error', 'لا توجد روابط لنسخها');
-        return;
-    }
-    
-    // جمع الروابط فقط - التصحيح هنا
-    let urlsText = '';
-    
-    for (const video of videos) {
-        if (video.videoUrl && video.videoUrl.trim() !== '') {
-            urlsText += video.videoUrl + '\n';
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استخراج روابط فيديوهات يوتيوب</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* المتغيرات والمظهر الداكن */
+        :root {
+            --primary-color: #ff0000;
+            --primary-dark: #cc0000;
+            --background-dark: #0f0f0f;
+            --card-dark: #1f1f1f;
+            --text-dark: #ffffff;
+            --text-secondary-dark: #aaa;
+            --border-dark: #333;
+            --input-dark: #2a2a2a;
+            --hover-dark: rgba(255, 255, 255, 0.1);
+            --success: #28a745;
+            --info: #17a2b8;
+            --error: #dc3545;
+            --warning: #ffc107;
         }
-    }
-    
-    // التحقق من وجود روابط
-    if (urlsText.trim() === '') {
-        showMessage('error', 'لا توجد روابط صالحة للنسخ');
-        return;
-    }
-    
-    try {
-        // طريقة أكثر موثوقية للنسخ
-        const textArea = document.createElement('textarea');
-        textArea.value = urlsText.trim();
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        if (successful) {
-            // عرض تأكيد بصري
-            showCopyConfirmation();
-            showMessage('success', `تم نسخ ${videos.length} رابط بنجاح!`);
-        } else {
-            throw new Error('فشل النسخ باستخدام execCommand');
-        }
-        
-    } catch (error) {
-        console.error('خطأ في النسخ:', error);
-        
-        // المحاولة باستخدام Clipboard API إذا فشلت الطريقة الأولى
-        try {
-            await navigator.clipboard.writeText(urlsText.trim());
-            showCopyConfirmation();
-            showMessage('success', `تم نسخ ${videos.length} رابط بنجاح!`);
-        } catch (clipboardError) {
-            console.error('خطأ في Clipboard API:', clipboardError);
-            
-            // العرض للمستخدم لنسخ يدوي
-            showManualCopyOption(urlsText.trim());
-        }
-    }
-}
 
-// ================ عرض تأكيد النسخ ================
-function showCopyConfirmation() {
-    const copyBtn = elements.copyBtn;
-    const originalText = copyBtn.innerHTML;
-    
-    // تغيير مظهر الزر مؤقتاً
-    copyBtn.innerHTML = '<i class="fas fa-check"></i> تم النسخ!';
-    copyBtn.style.background = 'linear-gradient(135deg, #28a745, #218838)';
-    
-    // العودة إلى الحالة الأصلية بعد 2 ثانية
-    setTimeout(() => {
-        copyBtn.innerHTML = originalText;
-        copyBtn.style.background = 'linear-gradient(135deg, var(--info), #138496)';
-    }, 2000);
-}
+        /* المتغيرات والمظهر الفاتح */
+        .light-mode {
+            --primary-color: #ff0000;
+            --primary-dark: #cc0000;
+            --background-dark: #f8f9fa;
+            --card-dark: #ffffff;
+            --text-dark: #212529;
+            --text-secondary-dark: #6c757d;
+            --border-dark: #dee2e6;
+            --input-dark: #ffffff;
+            --hover-dark: rgba(0, 0, 0, 0.05);
+        }
 
-// ================ عرض خيار النسخ اليدوي ================
-function showManualCopyOption(text) {
-    // إنشاء نافذة للنسخ اليدوي
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: var(--card-dark);
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        z-index: 1000;
-        max-width: 90%;
-        width: 500px;
-        border: 2px solid var(--primary-color);
-    `;
-    
-    modal.innerHTML = `
-        <h3 style="color: var(--primary-color); margin-bottom: 15px;">
-            <i class="fas fa-exclamation-triangle"></i> النسخ اليدوي
-        </h3>
-        <p style="margin-bottom: 15px; color: var(--text-dark);">
-            فشل النسخ التلقائي. الرجاء نسخ الروابط يدوياً:
-        </p>
-        <textarea 
-            id="manualCopyText" 
-            style="
-                width: 100%;
-                height: 200px;
-                padding: 10px;
-                background: var(--input-dark);
-                color: var(--text-dark);
-                border: 1px solid var(--border-dark);
-                border-radius: 5px;
-                font-family: monospace;
-                resize: vertical;
-                margin-bottom: 15px;
-            "
-            readonly
-        >${text}</textarea>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-            <button id="closeModalBtn" style="
-                padding: 8px 20px;
-                background: var(--primary-color);
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-            ">
-                إغلاق
+        /* الأنماط الأساسية */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-dark);
+            color: var(--text-dark);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* الهيدر */
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .header-content h1 {
+            color: var(--primary-color);
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .header-content p {
+            color: var(--text-secondary-dark);
+            font-size: 1.1rem;
+        }
+
+        /* زر تبديل المظهر */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        /* المحتوى الرئيسي */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        @media (min-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* البطاقات */
+        .card {
+            background-color: var(--card-dark);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-dark);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--text-dark);
+        }
+
+        /* حقول الإدخال */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border-dark);
+            border-radius: 6px;
+            background-color: var(--input-dark);
+            color: var(--text-dark);
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.1);
+        }
+
+        /* الأزرار */
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #218838);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, var(--info), #138496);
+        }
+
+        /* قسم التعليمات */
+        .instructions {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            border-right: 4px solid var(--primary-color);
+        }
+
+        .instructions h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            padding-right: 20px;
+            margin-bottom: 15px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .instructions a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .instructions a:hover {
+            text-decoration: underline;
+        }
+
+        /* قائمة الفيديوهات */
+        .video-list-container {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .video-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: var(--hover-dark);
+            border-radius: 6px;
+            border: 1px solid var(--border-dark);
+        }
+
+        .video-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
+        .video-url {
+            display: block;
+            color: var(--primary-color);
+            text-decoration: none;
+            word-break: break-all;
+            font-size: 0.9rem;
+            padding: 8px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .video-url:hover {
+            text-decoration: underline;
+        }
+
+        .no-videos {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary-dark);
+        }
+
+        /* عداد الفيديوهات */
+        .video-count {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-right: 10px;
+        }
+
+        /* أزرار الإجراءات */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        /* مؤشر التحميل */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* الرسائل */
+        .message {
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .message.success {
+            background-color: rgba(40, 167, 69, 0.1);
+            border: 1px solid rgba(40, 167, 69, 0.3);
+            color: #d4edda;
+        }
+
+        .message.error {
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            color: #f8d7da;
+        }
+
+        /* الفوتر */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--text-secondary-dark);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-dark);
+        }
+
+        /* شريط التمرير */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--background-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .light-mode ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="theme-toggle" id="themeToggle" title="تبديل المظهر">
+                <i class="fas fa-moon"></i>
             </button>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // تحديد العنصر والسماح بتحديده
-    const textarea = document.getElementById('manualCopyText');
-    textarea.select();
-    textarea.focus();
-    
-    // إغلاق النافذة
-    document.getElementById('closeModalBtn').onclick = function() {
-        document.body.removeChild(modal);
-    };
-}
+            <div class="header-content">
+                <h1><i class="fab fa-youtube"></i> استخراج روابط فيديوهات يوتيوب</h1>
+                <p>أدخل رابط قائمة التشغيل (Playlist) لاستخراج جميع روابط الفيديوهات</p>
+            </div>
+        </header>
 
-// ================ تحديث معالج الأحداث للتأكد من الاتصال الصحيح ================
-function initializeApp() {
-    // ... (الكود السابق) ...
-    
-    // إضافة معالجات الأحداث - تأكد من هذه الأسطر
-    elements.copyBtn.addEventListener('click', copyUrlsToClipboard);
-    
-    // ... (الكود السابق) ...
-}
+        <main class="main-content">
+            <!-- قسم الإدخال -->
+            <section class="input-section">
+                <div class="card">
+                    <h2 class="section-title"><i class="fas fa-link"></i> إدخال البيانات</h2>
+                    
+                    <div class="input-group">
+                        <label for="apiKey">مفتاح YouTube API:</label>
+                        <input type="password" id="apiKey" placeholder="مفتاح YouTube API هنا">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="playlistUrl">رابط قائمة يوتيوب:</label>
+                        <input type="text" id="playlistUrl" placeholder="رابط قائمة التشغيل هنا">
+                    </div>
+                    
+                    <button id="extractBtn" class="btn">
+                        <i class="fas fa-play"></i> استخراج الروابط
+                    </button>
+                    
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p>جاري استخراج الروابط، الرجاء الانتظار...</p>
+                    </div>
+                    
+                    <div id="successMessage" class="message success"></div>
+                    <div id="errorMessage" class="message error"></div>
+                    
+                    <!-- قسم التعليمات -->
+                    <div class="instructions">
+                        <h3><i class="fas fa-key"></i> كيف أحصل على مفتاح YouTube API؟</h3>
+                        <p>تحتاج إلى مفتاح API لتشغيل هذا البرنامج. اتبع هذه الخطوات:</p>
+                        <ol>
+                            <li>اذهب إلى <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                            <li>سجل الدخول بحساب Google</li>
+                            <li>أنشئ مشروعًا جديدًا</li>
+                            <li>اذهب إلى "APIs & Services" → "Library"</li>
+                            <li>ابحث عن "YouTube Data API v3" وقم بتفعيله</li>
+                            <li>اذهب إلى "Credentials" → "Create Credentials" → "API Key"</li>
+                            <li>انسخ المفتاح الذي تم إنشاؤه</li>
+                        </ol>
+                        <p><strong>نصيحة:</strong> قم بتقييد المفتاح على "YouTube Data API v3" فقط للحماية.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- قسم النتائج -->
+            <section class="output-section">
+                <div class="card">
+                    <h2 class="section-title">
+                        <i class="fas fa-list"></i> الروابط المستخرجة
+                        <span id="videoCount" class="video-count">0</span>
+                    </h2>
+                    
+                    <div class="video-list-container" id="videoList">
+                        <div class="no-videos">
+                            <i class="fas fa-video-slash fa-3x"></i>
+                            <p>لا توجد روابط مستخرجة بعد</p>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="downloadBtn" class="btn btn-success" disabled>
+                            <i class="fas fa-download"></i> تنزيل الملف
+                        </button>
+                        <button id="copyBtn" class="btn btn-info" disabled>
+                            <i class="fas fa-copy"></i> نسخ الروابط
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>تم التطوير باستخدام HTML، CSS و JavaScript</p>
+            <p>YouTube هو علامة تجارية مسجلة لشركة Google LLC</p>
+        </footer>
+    </div>
+
+    <script>
+        // ================ تهيئة العناصر ================
+        const elements = {
+            apiKey: document.getElementById('apiKey'),
+            playlistUrl: document.getElementById('playlistUrl'),
+            extractBtn: document.getElementById('extractBtn'),
+            videoList: document.getElementById('videoList'),
+            videoCount: document.getElementById('videoCount'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            copyBtn: document.getElementById('copyBtn'),
+            loading: document.getElementById('loading'),
+            successMessage: document.getElementById('successMessage'),
+            errorMessage: document.getElementById('errorMessage'),
+            themeToggle: document.getElementById('themeToggle'),
+            themeIcon: document.querySelector('#themeToggle i')
+        };
+
+        // ================ المتغيرات العامة ================
+        let videos = [];
+        let currentTheme = 'dark';
+
+        // ================ إدارة المظهر ================
+        function toggleTheme() {
+            if (currentTheme === 'dark') {
+                document.body.classList.add('light-mode');
+                elements.themeIcon.classList.remove('fa-moon');
+                elements.themeIcon.classList.add('fa-sun');
+                currentTheme = 'light';
+                elements.themeToggle.title = 'تفعيل المظهر الداكن';
+            } else {
+                document.body.classList.remove('light-mode');
+                elements.themeIcon.classList.remove('fa-sun');
+                elements.themeIcon.classList.add('fa-moon');
+                currentTheme = 'dark';
+                elements.themeToggle.title = 'تفعيل المظهر الفاتح';
+            }
+            localStorage.setItem('theme', currentTheme);
+        }
+
+        // ================ استخراج معرف القائمة ================
+        function extractPlaylistId(url) {
+            try {
+                const urlObj = new URL(url);
+                const listId = urlObj.searchParams.get('list');
+                return listId || null;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        // ================ جلب بيانات الفيديوهات ================
+        async function fetchVideosData(playlistId, apiKey) {
+            let allVideos = [];
+            let nextPageToken = null;
+            let page = 1;
+            
+            try {
+                do {
+                    let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}`;
+                    
+                    if (nextPageToken) {
+                        url += `&pageToken=${nextPageToken}`;
+                    }
+                    
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || 'خطأ في الاتصال');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.items && data.items.length > 0) {
+                        const pageVideos = data.items.map(item => ({
+                            title: item.snippet.title || 'بدون عنوان',
+                            videoId: item.snippet.resourceId?.videoId || '',
+                            videoUrl: item.snippet.resourceId?.videoId ? 
+                                     `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}` : '',
+                            position: item.snippet.position || 0
+                        }));
+                        
+                        allVideos = [...allVideos, ...pageVideos];
+                        
+                        // تحديث العداد بعد كل صفحة
+                        elements.videoCount.textContent = allVideos.length;
+                    }
+                    
+                    nextPageToken = data.nextPageToken;
+                    page++;
+                    
+                } while (nextPageToken && page <= 10); // حد أقصى 500 فيديو
+                
+                return allVideos;
+                
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // ================ عرض الفيديوهات ================
+        function displayVideos(videoList) {
+            if (!videoList || videoList.length === 0) {
+                elements.videoList.innerHTML = `
+                    <div class="no-videos">
+                        <i class="fas fa-video-slash fa-3x"></i>
+                        <p>لم يتم العثور على فيديوهات</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let videosHTML = '';
+            
+            videoList.forEach((video, index) => {
+                videosHTML += `
+                    <div class="video-item">
+                        <div class="video-title">
+                            <span style="color: var(--primary-color); margin-left: 5px;">${index + 1}.</span>
+                            ${video.title}
+                        </div>
+                        ${video.videoUrl ? `
+                            <a href="${video.videoUrl}" target="_blank" class="video-url">
+                                ${video.videoUrl}
+                            </a>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            elements.videoList.innerHTML = videosHTML;
+            elements.videoCount.textContent = videoList.length;
+        }
+
+        // ================ نسخ الروابط (مصحح بالكامل) ================
+        async function copyUrlsToClipboard() {
+            if (!videos || videos.length === 0) {
+                showMessage('error', 'لا توجد روابط لنسخها');
+                return;
+            }
+            
+            // جمع الروابط فقط
+            let urlsText = '';
+            
+            for (const video of videos) {
+                if (video.videoUrl && video.videoUrl.trim() !== '') {
+                    urlsText += video.videoUrl + '\n';
+                }
+            }
+            
+            // التحقق من وجود روابط
+            if (urlsText.trim() === '') {
+                showMessage('error', 'لا توجد روابط صالحة للنسخ');
+                return;
+            }
+            
+            const textToCopy = urlsText.trim();
+            
+            try {
+                // المحاولة باستخدام Clipboard API أولاً
+                await navigator.clipboard.writeText(textToCopy);
+                showCopyConfirmation();
+                showMessage('success', `تم نسخ ${videos.length} رابط بنجاح!`);
+            } catch (error) {
+                console.log('Clipboard API فشل، جرب الطريقة القديمة:', error);
+                
+                // الطريقة القديمة كبديل
+                try {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textToCopy;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    if (successful) {
+                        showCopyConfirmation();
+                        showMessage('success', `تم نسخ ${videos.length} رابط بنجاح!`);
+                    } else {
+                        throw new Error('فشل النسخ');
+                    }
+                } catch (execCommandError) {
+                    console.error('execCommand فشل:', execCommandError);
+                    
+                    // عرض خيار النسخ اليدوي
+                    showManualCopyOption(textToCopy);
+                }
+            }
+        }
+
+        // ================ عرض تأكيد النسخ ================
+        function showCopyConfirmation() {
+            const copyBtn = elements.copyBtn;
+            const originalText = copyBtn.innerHTML;
+            const originalBackground = copyBtn.style.background;
+            
+            // تغيير مظهر الزر مؤقتاً
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> تم النسخ!';
+            copyBtn.style.background = 'linear-gradient(135deg, #28a745, #218838)';
+            
+            // العودة إلى الحالة الأصلية بعد 2 ثانية
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+                copyBtn.style.background = originalBackground;
+            }, 2000);
+        }
+
+        // ================ عرض خيار النسخ اليدوي ================
+        function showManualCopyOption(text) {
+            // إنشاء نافذة للنسخ اليدوي
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: var(--card-dark);
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                z-index: 1000;
+                max-width: 90%;
+                width: 500px;
+                border: 2px solid var(--primary-color);
+            `;
+            
+            modal.innerHTML = `
+                <h3 style="color: var(--primary-color); margin-bottom: 15px;">
+                    <i class="fas fa-exclamation-triangle"></i> النسخ اليدوي
+                </h3>
+                <p style="margin-bottom: 15px; color: var(--text-dark);">
+                    الرجاء نسخ الروابط يدوياً من المربع أدناه:
+                </p>
+                <textarea 
+                    id="manualCopyText" 
+                    style="
+                        width: 100%;
+                        height: 200px;
+                        padding: 10px;
+                        background: var(--input-dark);
+                        color: var(--text-dark);
+                        border: 1px solid var(--border-dark);
+                        border-radius: 5px;
+                        font-family: monospace;
+                        resize: vertical;
+                        margin-bottom: 15px;
+                    "
+                    readonly
+                >${text}</textarea>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="closeModalBtn" style="
+                        padding: 8px 20px;
+                        background: var(--primary-color);
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    ">
+                        إغلاق
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // تحديد النص في المربع
+            const textarea = document.getElementById('manualCopyText');
+            textarea.select();
+            textarea.focus();
+            
+            // إغلاق النافذة
+            document.getElementById('closeModalBtn').onclick = function() {
+                document.body.removeChild(modal);
+                showMessage('info', 'يمكنك لصق الروابط في أي مكان');
+            };
+        }
+
+        // ================ تنزيل الملف ================
+        function downloadFile() {
+            if (!videos || videos.length === 0) {
+                showMessage('error', 'لا توجد بيانات للتنزيل');
+                return;
+            }
+            
+            // العناوين أولاً
+            let content = `عناوين وروابط فيديوهات يوتيوب\n`;
+            content += `تم الاستخراج: ${new Date().toLocaleString('ar-EG')}\n`;
+            content += `عدد الفيديوهات: ${videos.length}\n\n`;
+            content += `======== العناوين ========\n\n`;
+            
+            videos.forEach((video, index) => {
+                content += `${index + 1}. ${video.title}\n`;
+            });
+            
+            content += `\n\n======== الروابط ========\n\n`;
+            
+            videos.forEach(video => {
+                if (video.videoUrl) {
+                    content += `${video.videoUrl}\n`;
+                }
+            });
+            
+            // إنشاء الملف وتنزيله
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `youtube_links_${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showMessage('success', 'تم تنزيل الملف بنجاح');
+        }
+
+        // ================ عرض الرسائل ================
+        function showMessage(type, text) {
+            // إخفاء جميع الرسائل أولاً
+            elements.successMessage.style.display = 'none';
+            elements.errorMessage.style.display = 'none';
+            
+            const messageElement = type === 'success' ? 
+                elements.successMessage : elements.errorMessage;
+            
+            messageElement.textContent = text;
+            messageElement.style.display = 'block';
+            
+            // إخفاء الرسالة بعد 5 ثواني
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // ================ معالجة الاستخراج ================
+        async function handleExtraction() {
+            const apiKey = elements.apiKey.value.trim();
+            const playlistUrl = elements.playlistUrl.value.trim();
+            
+            // التحقق من البيانات
+            if (!apiKey) {
+                showMessage('error', 'الرجاء إدخال مفتاح YouTube API');
+                elements.apiKey.focus();
+                return;
+            }
+            
+            if (!playlistUrl) {
+                showMessage('error', 'الرجاء إدخال رابط قائمة التشغيل');
+                elements.playlistUrl.focus();
+                return;
+            }
+            
+            // التحقق من صحة الرابط
+            if (!playlistUrl.includes('youtube.com') && !playlistUrl.includes('youtu.be')) {
+                showMessage('error', 'الرجاء إدخال رابط يوتيوب صحيح');
+                return;
+            }
+            
+            // استخراج معرف القائمة
+            const playlistId = extractPlaylistId(playlistUrl);
+            if (!playlistId) {
+                showMessage('error', 'تعذر استخراج معرف القائمة. تأكد من الرابط');
+                return;
+            }
+            
+            // حفظ المفتاح في التخزين المحلي
+            localStorage.setItem('youtube_api_key', apiKey);
+            
+            // إظهار مؤشر التحميل
+            elements.loading.style.display = 'block';
+            elements.extractBtn.disabled = true;
+            
+            try {
+                // جلب البيانات
+                videos = await fetchVideosData(playlistId, apiKey);
+                
+                if (videos.length === 0) {
+                    showMessage('error', 'لم يتم العثور على فيديوهات في هذه القائمة');
+                } else {
+                    showMessage('success', `تم استخراج ${videos.length} رابط بنجاح`);
+                    displayVideos(videos);
+                    elements.downloadBtn.disabled = false;
+                    elements.copyBtn.disabled = false;
+                }
+                
+            } catch (error) {
+                let errorMsg = 'حدث خطأ أثناء استخراج البيانات. ';
+                
+                if (error.message.includes('API key not valid')) {
+                    errorMsg = 'مفتاح API غير صالح. تأكد من المفتاح';
+                } else if (error.message.includes('quota')) {
+                    errorMsg = 'تم تجاوز الحد اليومي لطلبات API';
+                } else if (error.message.includes('playlist not found')) {
+                    errorMsg = 'القائمة غير موجودة أو ليست عامة';
+                } else {
+                    errorMsg += error.message;
+                }
+                
+                showMessage('error', errorMsg);
+                videos = [];
+                displayVideos([]);
+                elements.downloadBtn.disabled = true;
+                elements.copyBtn.disabled = true;
+                
+            } finally {
+                elements.loading.style.display = 'none';
+                elements.extractBtn.disabled = false;
+            }
+        }
+
+        // ================ تهيئة التطبيق ================
+        function initializeApp() {
+            // استعادة المفتاح من التخزين المحلي
+            const savedApiKey = localStorage.getItem('youtube_api_key');
+            if (savedApiKey) {
+                elements.apiKey.value = savedApiKey;
+                showMessage('success', 'تم استرجاع مفتاح API من التخزين المحلي');
+            }
+            
+            // استعادة المظهر
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                elements.themeIcon.classList.remove('fa-moon');
+                elements.themeIcon.classList.add('fa-sun');
+                currentTheme = 'light';
+                elements.themeToggle.title = 'تفعيل المظهر الداكن';
+            }
+            
+            // إضافة معالجات الأحداث
+            elements.extractBtn.addEventListener('click', handleExtraction);
+            elements.downloadBtn.addEventListener('click', downloadFile);
+            elements.copyBtn.addEventListener('click', copyUrlsToClipboard);
+            elements.themeToggle.addEventListener('click', toggleTheme);
+            
+            // السماح بالضغط على Enter
+            elements.apiKey.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleExtraction();
+            });
+            
+            elements.playlistUrl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleExtraction();
+            });
+            
+            showMessage('success', 'مرحباً! أدخل مفتاح API ورابط القائمة لبدء الاستخراج');
+        }
+
+        // ================ بدء التطبيق ================
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
